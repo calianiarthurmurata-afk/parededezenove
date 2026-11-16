@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Parede de Dezenove · Minhas Notas</title>
+<meta name="description" content="Calculadora de notas por bimestre (AV1, AV2, AV3): veja quanto falta para ficar no azul."><link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+:root{
+  --bg:#f5f7fb; --card:#ffffff; --text:#0f172a; --muted:#64748b; --line:#e6e9f2; --input:#f8fafc;
+  --blue:#2a5caa; --blue-soft:#e8eef9; --red:#e11d48; --red-soft:#ffe9ef;
+  --amber:#d97706; --amber-soft:#fff4e2; --gray-soft:#eef1f6;
+  --shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.06);
+  --radius:16px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b1020; --card:#131a2e; --text:#e8ecf7; --muted:#93a0bd; --line:#232c45; --input:#0f1528;
+    --blue:#5b8cff; --blue-soft:#1a2750; --red:#ff5a7e; --red-soft:#3a1424;
+    --amber:#f5a524; --amber-soft:#3a2a10; --gray-soft:#1b2338;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b1020; --card:#131a2e; --text:#e8ecf7; --muted:#93a0bd; --line:#232c45; --input:#0f1528;
+  --blue:#5b8cff; --blue-soft:#1a2750; --red:#ff5a7e; --red-soft:#3a1424;
+  --amber:#f5a524; --amber-soft:#3a2a10; --gray-soft:#1b2338;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s}
+button{font:inherit;color:inherit;cursor:pointer}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px 60px}
+
+/* Header */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--bg) 85%,transparent);
+  backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.bar{max-width:1120px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;letter-spacing:-.02em;margin-right:auto}
+.logo-mark{width:42px;height:42px;border-radius:12px;background:var(--blue);color:#fff;flex:none;display:grid;place-items:center;
+  font-weight:800;font-size:17px;letter-spacing:-.04em;box-shadow:0 6px 16px rgba(42,92,170,.25);transition:transform .3s}
+.logo:hover .logo-mark{transform:rotate(-6deg) scale(1.05)}
+.logo-txt{display:flex;flex-direction:column;line-height:1.1}
+.logo-txt small{font-size:11px;font-weight:700;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+.seg{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px;position:relative}
+.seg button{border:0;background:transparent;padding:8px 14px;border-radius:9px;font-weight:600;color:var(--muted);transition:.2s;white-space:nowrap}
+.seg button.on{background:var(--blue);color:#fff;box-shadow:0 4px 12px rgba(37,99,235,.3)}
+.icon-btn{border:1px solid var(--line);background:var(--card);width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:18px;transition:.15s}
+.icon-btn:hover{transform:translateY(-1px);border-color:var(--blue)}
+.tools{display:flex;gap:8px}
+
+/* Hero */
+.hero{padding:28px 0 8px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.hero h1{margin:0;font-size:clamp(24px,4vw,32px);letter-spacing:-.03em}
+.hero p{margin:4px 0 0;color:var(--muted)}
+.rule{font-size:13px;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:8px 12px;border-radius:999px}
+.rule b{color:var(--blue)}
+
+/* Summary */
+.summary{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:14px;margin-top:18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px}
+.stat-label{font-size:13px;color:var(--muted);font-weight:500}
+.stat-num{font-size:30px;font-weight:800;letter-spacing:-.03em;margin-top:4px}
+.stat-sub{font-size:13px;color:var(--muted)}
+.ring-card{display:flex;align-items:center;gap:16px}
+.ring{width:92px;height:92px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .track{stroke:var(--gray-soft)}
+.ring .val{transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1),stroke .3s}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:22px}
+.c-blue{color:var(--blue)} .c-red{color:var(--red)} .c-amber{color:var(--amber)}
+
+/* Focus */
+.focus{margin-top:14px;display:flex;gap:16px;align-items:center;background:linear-gradient(120deg,var(--blue-soft),var(--card) 70%)}
+.focus-emoji{font-size:34px;animation:float 3s ease-in-out infinite}
+@keyframes float{50%{transform:translateY(-5px)}}
+.focus h3{margin:0;font-size:16px}
+.focus p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.btn{border:0;background:var(--blue);color:#fff;padding:10px 16px;border-radius:11px;font-weight:600;white-space:nowrap;transition:.15s}
+.btn:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}
+.focus .btn{margin-left:auto}
+
+/* Badges */
+.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.badge{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;
+  background:var(--card);border:1px dashed var(--line);color:var(--muted);opacity:.55;transition:.3s}
+.badge.on{opacity:1;border-style:solid;border-color:var(--blue);color:var(--text);background:var(--blue-soft)}
+
+/* Toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;margin:26px 0 12px;flex-wrap:wrap}
+.toolbar h2{margin:0 auto 0 0;font-size:18px;letter-spacing:-.02em}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--card);padding:7px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted)}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+.search{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:8px 14px;font:inherit;color:var(--text);width:200px;outline:none}
+.search:focus{border-color:var(--blue)}
+
+/* Subject list */
+.head-row,.row{display:grid;grid-template-columns:minmax(200px,1.4fr) minmax(300px,2fr) 90px minmax(170px,1.2fr);gap:14px;align-items:center}
+.head-row{padding:0 18px 8px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.head-row .gh{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.list{display:flex;flex-direction:column;gap:10px}
+.row{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;position:relative;overflow:hidden;
+  transition:border-color .3s,transform .2s,box-shadow .3s;animation:rowIn .35s both}
+.row:hover{box-shadow:var(--shadow)}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tone,var(--line));transition:background .3s}
+@keyframes rowIn{from{opacity:0;transform:translateY(6px)}}
+.row.pop{animation:pop .5s}
+@keyframes pop{30%{transform:scale(1.015)}}
+.subj .name{font-weight:700;font-size:14px;letter-spacing:-.01em}
+.pill{display:inline-block;margin-top:4px;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--gray-soft);color:var(--muted)}
+.t-blue{--tone:var(--blue)} .t-red{--tone:var(--red)} .t-amber{--tone:var(--amber)}
+.t-blue .pill{background:var(--blue-soft);color:var(--blue)}
+.t-red .pill{background:var(--red-soft);color:var(--red)}
+.t-amber .pill{background:var(--amber-soft);color:var(--amber)}
+.grades{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+/* Caixa da nota do bimestre (calculada) */
+.bim{height:46px;border:1.5px solid var(--line);background:var(--input);border-radius:10px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;position:relative;transition:.15s;padding:0}
+.bim:hover{border-color:var(--blue);transform:translateY(-1px)}
+.bim small{display:none;font-size:10.5px;color:var(--muted);font-weight:600}
+.bim .bv{font-weight:800;font-size:16px}
+.bim .bv.ph{color:var(--blue);opacity:.45;font-weight:600;font-size:13px}
+.bim.lo .bv{color:var(--red)} .bim.lo{border-color:color-mix(in srgb,var(--red) 35%,var(--line))}
+.bim.hi .bv{color:var(--blue)}
+.bim.partial::after{content:"";position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--amber)}
+.bim.sel{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.toggle{border:0;background:var(--blue-soft);color:var(--blue);font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;margin-left:6px}
+/* Painel AV1/AV2/AV3 */
+.detail{grid-column:1/-1;display:none;grid-template-columns:repeat(4,1fr);gap:10px}
+.row.open .detail{display:grid;animation:rowIn .3s both}
+.dbim{background:var(--input);border:1px solid var(--line);border-radius:12px;padding:10px 12px;transition:border-color .2s}
+.dbim:focus-within{border-color:var(--blue)}
+.dh{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.dh b{font-size:16px;letter-spacing:0;color:var(--text)}
+.dh b.lo{color:var(--red)} .dh b.hi{color:var(--blue)}
+.av{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.av span{font-size:13px;font-weight:700;line-height:1.15}
+.av span small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.av input{width:64px;height:38px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;text-align:center;
+  font:inherit;font-weight:700;font-size:15px;color:var(--text);outline:none;transition:.15s}
+.av input:focus{border-color:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.av input::placeholder{color:var(--blue);opacity:.45;font-weight:600;font-size:13px}
+.av input.lo{color:var(--red);border-color:color-mix(in srgb,var(--red) 35%,var(--line))}
+.av input.hi{color:var(--blue)}
+.dfoot{font-size:11.5px;color:var(--muted);margin-top:8px}
+.avg{text-align:center}
+.avg b{display:block;font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--tone,var(--muted))}
+.avg small{font-size:11px;color:var(--muted)}
+.need{font-size:13px;color:var(--muted)}
+.need strong{color:var(--tone,var(--text));font-size:15px}
+.meter{grid-column:1/-1;height:5px;background:var(--gray-soft);border-radius:9px;position:relative;margin-top:-4px}
+.meter i{position:absolute;left:0;top:0;bottom:0;border-radius:9px;background:var(--tone,var(--muted));transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.meter em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.25;border-radius:2px}
+.empty-state{text-align:center;color:var(--muted);padding:40px}
+
+footer{margin-top:30px;text-align:center;color:var(--muted);font-size:13px}
+
+/* Toasts */
+.toasts{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;flex-direction:column;gap:10px;max-width:min(380px,calc(100vw - 32px))}
+.toast{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--blue);border-radius:14px;box-shadow:0 18px 40px rgba(15,23,42,.18);
+  padding:14px 16px 14px 14px;display:flex;gap:12px;align-items:flex-start;animation:tin .45s cubic-bezier(.2,1.2,.3,1) both}
+.toast.out{animation:tout .3s forwards}
+.toast .te{font-size:24px;line-height:1}
+.toast .tt{display:block;font-size:14px}
+.toast p b{color:var(--text)}
+.toast p{margin:2px 0 0;font-size:13.5px;color:var(--muted)}
+.toast .x{margin-left:auto;border:0;background:none;color:var(--muted);font-size:16px;padding:0 2px}
+.toast.red{border-left-color:var(--red)} .toast.amber{border-left-color:var(--amber)} .toast.gold{border-left-color:#eab308}
+@keyframes tin{from{opacity:0;transform:translateX(40px) scale(.95)}}
+@keyframes tout{to{opacity:0;transform:translateX(40px)}}
+
+/* Dialog */
+dialog{border:1px solid var(--line);border-radius:20px;padding:0;background:var(--card);color:var(--text);width:min(460px,calc(100vw - 32px));box-shadow:0 30px 80px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(10,15,30,.45);backdrop-filter:blur(3px)}
+.dlg{padding:22px}
+.dlg h3{margin:0 0 4px}
+.dlg p{margin:0 0 16px;color:var(--muted);font-size:13.5px}
+.field{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.field input{width:80px;height:38px;border:1.5px solid var(--line);background:var(--input);border-radius:10px;text-align:center;font:inherit;font-weight:700;color:var(--text)}
+.wgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px}
+.wgrid label{font-size:12px;color:var(--muted);font-weight:600;text-align:center}
+.wgrid input{width:100%;margin-top:4px;height:38px;border:1.5px solid var(--line);background:var(--input);border-radius:10px;text-align:center;font:inherit;font-weight:700;color:var(--text)}
+.dlg-actions{display:flex;gap:8px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:16px}
+.dlg-actions .btn{flex:1}
+.btn.danger{background:var(--red-soft);color:var(--red)}
+
+/* Responsive */
+@media (max-width:900px){
+  .summary{grid-template-columns:1fr 1fr}
+  .ring-card{grid-column:1/-1}
+  .head-row{display:none}
+  .row{grid-template-columns:1fr auto;gap:10px 14px}
+  .grades{grid-column:1/-1;grid-row:2}
+  .bim small{display:block}
+  .detail{grid-row:5;grid-template-columns:1fr 1fr}
+  .avg{grid-row:1;grid-column:2}
+  .need{grid-column:1/-1;grid-row:3}
+  .meter{grid-row:4;margin-top:0}
+}
+@media (max-width:560px){
+  .detail{grid-template-columns:1fr}
+  .bar{gap:10px}
+  .seg{order:3;width:100%}
+  .seg button{flex:1}
+  .search{width:100%}
+  .focus{flex-wrap:wrap}
+  .focus .btn{margin-left:0;width:100%}
+  .stat-num{font-size:26px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo"><div class="logo-mark" aria-hidden="true">6+</div>
+      <div class="logo-txt"><small>Calculadora de notas</small>Parede de Dezenove</div></div>
+    <div class="seg" id="yearSeg"></div>
+    <div class="tools">
+      <button class="icon-btn" id="tipBtn" title="Dica do coach">💡</button>
+      <button class="icon-btn" id="themeBtn" title="Alternar tema">🌓</button>
+      <button class="icon-btn" id="setBtn" title="Ajustes">⚙️</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div>
+      <h1 id="yearTitle"></h1>
+      <p id="heroMsg"></p>
+    </div>
+    <div class="rule" id="ruleTxt"></div>
+  </section>
+
+  <section class="summary">
+    <div class="card ring-card">
+      <div class="ring">
+        <svg width="92" height="92" viewBox="0 0 92 92">
+          <circle class="track" cx="46" cy="46" r="38" fill="none" stroke-width="9"/>
+          <circle class="val" id="ringVal" cx="46" cy="46" r="38" fill="none" stroke-width="9" stroke-linecap="round"
+            stroke-dasharray="238.76" stroke-dashoffset="238.76" stroke="var(--blue)"/>
+        </svg>
+        <span id="ringNum">—</span>
+      </div>
+      <div>
+        <div class="stat-label">Média geral</div>
+        <div class="stat-sub" id="ringSub">Lance suas notas para começar</div>
+      </div>
+    </div>
+    <div class="card"><div class="stat-label">No azul 💙</div><div class="stat-num c-blue" id="sBlue">0</div><div class="stat-sub" id="sBlueSub"></div></div>
+    <div class="card"><div class="stat-label">Precisam de atenção</div><div class="stat-num c-amber" id="sWarn">0</div><div class="stat-sub" id="sWarnSub"></div></div>
+    <div class="card"><div class="stat-label">Avaliações lançadas</div><div class="stat-num" id="sFilled">0</div><div class="stat-sub" id="sFilledSub"></div></div>
+  </section>
+
+  <section class="card focus" id="focusCard">
+    <div class="focus-emoji" id="focusEmoji">🎯</div>
+    <div>
+      <h3 id="focusTitle"></h3>
+      <p id="focusText"></p>
+    </div>
+    <button class="btn" id="focusBtn">Quero uma dica</button>
+  </section>
+
+  <section class="badges" id="badges"></section>
+
+  <section class="toolbar">
+    <h2>Matérias</h2>
+    <div class="chips" id="chips"></div>
+    <input class="search" id="search" placeholder="🔎 Buscar matéria">
+  </section>
+
+  <div class="head-row">
+    <div>Matéria</div>
+    <div class="gh"><span>1º Bim</span><span>2º Bim</span><span>3º Bim</span><span>4º Bim</span></div>
+    <div style="text-align:center">Média</div>
+    <div>Para passar</div>
+  </div>
+  <div class="list" id="list"></div>
+
+  <footer>Clique em um bimestre para lançar a AV1 (prova mensal), AV2 (prova bimestral) e AV3 (trabalho). A nota do bimestre é calculada automaticamente.<br>
+    Os campos vazios mostram, em azul claro, a nota mínima que você precisa tirar. A bolinha laranja indica bimestre parcial.<br>
+    Cada pessoa vê só as próprias notas. <span id="sync">Conectando…</span><br>
+    Ferramenta feita por aluno, não oficial. Confira sempre as notas no sistema da escola.</footer>
+</main>
+
+<div class="toasts" id="toasts"></div>
+
+<dialog id="dlg">
+  <form class="dlg" method="dialog">
+    <h3>Ajustes</h3>
+    <p>Regra do Colégio Somar: nota do bimestre = (AV1 + AV2 + AV3) ÷ 3 · média do ano = soma dos 4 bimestres ÷ 4.</p>
+    <div class="field"><span>Média para passar (azul)</span><input id="optMin" inputmode="decimal"></div>
+    <div class="dlg-actions">
+      <button type="button" class="btn ghost" id="exportBtn">⬇ Exportar</button>
+      <button type="button" class="btn ghost" id="importBtn">⬆ Importar</button>
+      <button type="button" class="btn danger" id="resetBtn">Limpar ano</button>
+    </div>
+    <div class="dlg-actions" style="border:0;padding-top:10px">
+      <button class="btn" id="saveOpts" value="save">Salvar</button>
+    </div>
+    <input type="file" id="importFile" accept="application/json" hidden>
+  </form>
+</dialog>
+
+<script>
+/* ================== DADOS ================== */
+const YEARS = {
+  em1: {
+    tab: '1º Ano EM', title: '1º Ano · Ensino Médio',
+    subjects: ['FÍSICA 1','FÍSICA 2','MATEMÁTICA 1','MATEMÁTICA 2','QUÍMICA 1','QUÍMICA 2','BIOLOGIA',
+      'GEOGRAFIA 1','GEOGRAFIA 2','HISTÓRIA','FILOSOFIA','SOCIOLOGIA','REDAÇÃO','GRAMÁTICA','LITERATURA',
+      'INGLÊS','ARTE','EDUCAÇÃO FÍSICA','ENSINO RELIGIOSO E ÉTICA','TRILHA 1 - EDUCAÇÃO FINANCEIRA',
+      'TRILHA 2 - ATITUDE EMPREENDEDORA','TRILHA 3 - REPERTÓRIO']
+  },
+  f9: {
+    tab: '9º Ano', title: '9º Ano · Fundamental II',
+    subjects: ['MATEMÁTICA','CIÊNCIAS','REDAÇÃO','GRAMÁTICA','LITERATURA','HISTÓRIA','GEOGRAFIA',
+      'INGLÊS','ARTES','EDUCAÇÃO FÍSICA','ENSINO RELIGIOSO','ROBÓTICA']
+  }
+};
+const EMOJI = {'FÍSICA':'⚛️','MATEMÁTICA':'📐','QUÍMICA':'🧪','BIOLOGIA':'🧬','CIÊNCIAS':'🔬','GEOGRAFIA':'🌎','HISTÓRIA':'🏛️',
+  'FILOSOFIA':'🤔','SOCIOLOGIA':'👥','REDAÇÃO':'✍️','GRAMÁTICA':'📝','LITERATURA':'📚','INGLÊS':'🇬🇧','ARTE':'🎨',
+  'EDUCAÇÃO FÍSICA':'⚽','ENSINO RELIGIOSO':'🕊️','TRILHA 1':'💰','TRILHA 2':'🚀','TRILHA 3':'🎭','ROBÓTICA':'🤖'};
+const emojiOf = s => { for (const k in EMOJI) if (s.startsWith(k)) return EMOJI[k]; return '📘'; };
+
+const STORE = 'minhas-notas-v1';
+const AVS = [{n:'AV1',d:'Prova mensal'},{n:'AV2',d:'Prova bimestral'},{n:'AV3',d:'Trabalho'}];
+const SLOTS = 12; // 4 bimestres × 3 avaliações (índice = bimestre*3 + av)
+const SEED_ID = 'none';
+const SEED_EM1 = [];
+// Aplica o boletim uma única vez por navegador (não sobrescreve depois que você editar)
+function applySeed(s){
+  if (s.seeded === SEED_ID) return s;
+  SEED_EM1.forEach((bim, b) => {
+    for (const sub in bim){
+      const arr = s.grades.em1[sub] ? [...s.grades.em1[sub]] : Array(SLOTS).fill(null);
+      bim[sub].forEach((g, a) => { arr[b*3+a] = g; });
+      s.grades.em1[sub] = arr;
+    }
+  });
+  s.seeded = SEED_ID;
+  return s;
+}
+const defaults = () => ({ year:'em1', min:6, weights:[1,1,1,1], avWeights:[1,1,1], grades:{em1:{},f9:{}}, earned:{em1:[],f9:[]}, theme:null, filter:'all' });
+let state = load();
+function load(){
+  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && s.grades) return applySeed(migrate(Object.assign(defaults(), s))); } catch(e){}
+  return applySeed(defaults());
+}
+// Versão antiga guardava só a nota do bimestre: replica nas 3 AVs para manter a mesma média
+function migrate(s){
+  for (const y in s.grades) for (const sub in s.grades[y]){
+    const a = s.grades[y][sub];
+    if (a.length === 4) s.grades[y][sub] = a.flatMap(g => [g,g,g]);
+  }
+  // Regra do colégio: tudo com peso 1 (média simples)
+  s.weights = [1,1,1,1]; s.avWeights = [1,1,1];
+  return s;
+}
+/* ================== SALVAMENTO ==================
+   Cada pessoa tem suas próprias notas:
+   - logada no Claude: salvas na conta (área privada de cada usuário)
+   - sem login: salvas só neste navegador                                 */
+let cloud = null, cloudTimer = null;
+function save(){
+  try { localStorage.setItem(STORE, JSON.stringify(state)); } catch(e){}
+  if (cloud){
+    clearTimeout(cloudTimer);
+    cloudTimer = setTimeout(() => {
+      cloud.set({ json: JSON.stringify(state), updatedAt: Date.now() })
+        .then(() => setSync('ok')).catch(() => setSync('err'));
+    }, 800);
+  }
+}
+function setSync(k){
+  const el = document.getElementById('sync'); if (!el) return;
+  el.textContent = { ok:'☁️ Notas salvas na sua conta', local:'💾 Suas notas ficam salvas neste navegador (use Exportar para fazer backup)',
+                     err:'⚠️ Não consegui salvar na nuvem agora — suas notas continuam neste navegador', wait:'Conectando…' }[k];
+}
+async function initCloud(){
+  if (!window.claude || !window.claude.use){ setSync('local'); return; }
+  setSync('wait');
+  try {
+    const [db, user] = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+    if (!db || !user){ setSync('local'); return; }
+    const id = await user.id();
+    if (!id){ setSync('local'); return; }
+    const ref = db.collection('data/users/' + id).doc('notas');
+    const snap = await ref.get();
+    let remote = snap.exists ? JSON.parse(snap.data().json) : null;
+    if (!remote && await user.isOwner()){
+      try { const s2 = await db.doc('owner/seed').get(); if (s2.exists) remote = JSON.parse(s2.data().json); } catch(e){}
+    }
+    cloud = ref;
+    if (remote && remote.grades){ state = migrate(Object.assign(defaults(), remote, { theme: state.theme })); renderAll(); }
+    save();
+  } catch(e){ cloud = null; setSync('local'); }
+}
+
+/* ================== UTIL ================== */
+const $ = s => document.querySelector(s);
+const fmt = n => n == null ? '—' : n.toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1});
+const up1 = n => Math.ceil(n*10 - 1e-9)/10;
+const pick = a => a[Math.floor(Math.random()*a.length)];
+function parseGrade(v){
+  v = String(v).trim().replace(',','.');
+  if (v === '') return null;
+  const n = parseFloat(v);
+  if (isNaN(n)) return undefined;
+  return Math.round(Math.min(10, Math.max(0, n))*100)/100;
+}
+const gradesOf = s => state.grades[state.year][s] || Array(SLOTS).fill(null);
+
+/* ================== CÁLCULO ==================
+   Nota do bimestre = média ponderada de AV1, AV2, AV3 (pesos em Ajustes)
+   Média anual     = média ponderada dos 4 bimestres
+   => cada AV tem um "peso final" = pesoBim × pesoAV / (Σ pesosBim × Σ pesosAV)            */
+function coefs(){
+  const wb = state.weights, wa = state.avWeights;
+  const sb = wb.reduce((a,b)=>a+b,0) || 1, sa = wa.reduce((a,b)=>a+b,0) || 1;
+  const c = [];
+  for (let b=0;b<4;b++) for (let a=0;a<3;a++) c.push(wb[b]*wa[a]/(sb*sa));
+  return c;
+}
+function bimInfo(arr, b){
+  const wa = state.avWeights; let s=0, w=0, n=0, req=0;
+  for (let a=0;a<3;a++){ if (!wa[a]) continue; req++; const g = arr[b*3+a]; if (g != null){ s+=g*wa[a]; w+=wa[a]; n++; } }
+  return { v: w ? s/w : null, complete: n === req, n };
+}
+function analyze(arr){
+  const c = coefs(), min = state.min;
+  let sum=0, cf=0, ce=0, filled=0, emptyN=0;
+  arr.forEach((g,i)=>{ if (!c[i]) return; if (g==null){ ce+=c[i]; emptyN++; } else { sum+=g*c[i]; cf+=c[i]; filled++; } });
+  const r = { avg: cf ? sum/cf : null, filled, emptyN, need:null, final:null };
+  if (!filled) return {...r, key:'empty', label:'Sem notas', tone:'', need:min};
+  const total = cf + ce, emptyW = ce;
+  if (emptyW < 1e-12){
+    r.final = sum/total;
+    return r.final >= min - 1e-9 ? {...r, key:'pass', label:'Aprovado ✓', tone:'blue'} : {...r, key:'fail', label:'Recuperação', tone:'red'};
+  }
+  const missing = min*total - sum;
+  r.need = Math.max(0, missing/emptyW);
+  if (missing <= 0) return {...r, key:'safe', label:'Garantido 🎉', tone:'blue'};
+  if (r.need > 10) return {...r, key:'risk', label:'Em risco', tone:'red'};
+  if (r.avg >= min) return {...r, key:'ok', label:'No azul', tone:'blue'};
+  return {...r, key:'warn', label:'Precisa subir', tone:'amber'};
+}
+const isBlue = a => ['pass','safe','ok'].includes(a.key);
+const isBad = a => ['warn','risk','fail'].includes(a.key);
+
+function needText(a){
+  const m = fmt(state.min);
+  switch(a.key){
+    case 'empty': return `Precisa de <strong>${m}</strong> em cada avaliação`;
+    case 'pass':  return `Média final <strong>${fmt(a.final)}</strong> — passou! 💙`;
+    case 'fail':  return `Média final <strong>${fmt(a.final)}</strong> — foco na recuperação 💪`;
+    case 'safe':  return `Já atingiu a média! Mantenha o ritmo ✨`;
+    case 'risk':  return `Precisaria de <strong>${fmt(up1(a.need))}</strong> — converse com o professor sobre recuperação`;
+    default: return `Precisa de <strong>${fmt(up1(a.need))}</strong> ${a.emptyN>1 ? `em cada uma das ${a.emptyN} avaliações restantes` : 'na última avaliação'}`;
+  }
+}
+
+function yearStats(){
+  const subs = YEARS[state.year].subjects;
+  const list = subs.map(s => ({ s, a: analyze(gradesOf(s)) }));
+  const withGrades = list.filter(x => x.a.filled);
+  const avgs = withGrades.map(x => x.a.final ?? x.a.avg);
+  const general = avgs.length ? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
+  const filled = list.reduce((n,x)=>n+x.a.filled,0);
+  const rank = { risk:0, fail:0, warn:1, ok:2, safe:3, pass:3, empty:4 };
+  const focus = [...withGrades].sort((x,y)=> rank[x.a.key]-rank[y.a.key] || (y.a.need??0)-(x.a.need??0) || (x.a.avg-y.a.avg))[0];
+  return { list, general, filled, total: subs.length*SLOTS, blue: list.filter(x=>isBlue(x.a)).length,
+           bad: list.filter(x=>isBad(x.a)), focus, withGrades };
+}
+
+/* ================== CONQUISTAS ================== */
+const BADGES = [
+  { id:'first',  icon:'🌱', name:'Primeira nota',  test: st => st.filled > 0 },
+  { id:'ten',    icon:'🔟', name:'Tirou 10',       test: () => Object.values(state.grades[state.year]).some(a => a.includes(10)) },
+  { id:'bim',    icon:'📅', name:'Bimestre completo', test: () => [0,1,2,3].some(b => YEARS[state.year].subjects.every(s => bimInfo(gradesOf(s), b).complete)) },
+  { id:'eight',  icon:'🚀', name:'Média geral 8+', test: st => st.general != null && st.general >= 8 },
+  { id:'allblue',icon:'💙', name:'Tudo no azul',   test: st => st.withGrades.length === st.list.length && st.blue === st.list.length },
+  { id:'comeback',icon:'🔥',name:'Virada',         test: () => state.earned[state.year].includes('comeback') },
+];
+function renderBadges(st, announce){
+  const earned = state.earned[state.year];
+  $('#badges').innerHTML = BADGES.map(b => {
+    const on = b.test(st);
+    if (on && !earned.includes(b.id)){
+      earned.push(b.id);
+      if (announce){ toast('🏆', 'Conquista desbloqueada!', `${b.icon} ${b.name}`, 'gold'); celebrate(.6); }
+    }
+    return `<span class="badge ${on?'on':''}" title="${b.name}">${b.icon} ${b.name}</span>`;
+  }).join('');
+  save();
+}
+
+/* ================== RENDER ================== */
+function renderTabs(){
+  $('#yearSeg').innerHTML = Object.entries(YEARS).map(([k,y]) =>
+    `<button data-y="${k}" class="${k===state.year?'on':''}">${y.tab}</button>`).join('');
+}
+const FILTERS = [['all','Todas'],['bad','Atenção'],['blue','No azul'],['empty','Sem notas']];
+function renderChips(){
+  $('#chips').innerHTML = FILTERS.map(([k,l]) => `<button class="chip ${state.filter===k?'on':''}" data-f="${k}">${l}</button>`).join('');
+}
+
+function renderList(){
+  const q = $('#search').value.trim().toLowerCase();
+  const subs = YEARS[state.year].subjects.filter(s => {
+    if (q && !s.toLowerCase().includes(q)) return false;
+    const a = analyze(gradesOf(s));
+    if (state.filter==='bad') return isBad(a);
+    if (state.filter==='blue') return isBlue(a);
+    if (state.filter==='empty') return a.key==='empty';
+    return true;
+  });
+  if (!subs.length){ $('#list').innerHTML = `<div class="empty-state">Nenhuma matéria aqui 🙌</div>`; return; }
+  const val = v => v==null ? '' : String(v).replace('.',',');
+  $('#list').innerHTML = subs.map((s,idx) => {
+    const g = gradesOf(s);
+    return `<div class="row ${openRows.has(s)?'open':''}" data-s="${s}" style="animation-delay:${idx*25}ms">
+      <div class="subj"><div class="name">${emojiOf(s)} ${s}</div><span class="pill"></span><button class="toggle" type="button"></button></div>
+      <div class="grades">${[0,1,2,3].map(b => `<button class="bim" type="button" data-bim="${b}"><small>${b+1}º Bim</small><span class="bv">—</span></button>`).join('')}</div>
+      <div class="avg"><b>—</b><small>média</small></div>
+      <div class="need"></div>
+      <div class="meter"><i></i><em></em></div>
+      <div class="detail">${[0,1,2,3].map(b => `<div class="dbim" data-db="${b}">
+        <div class="dh">${b+1}º Bimestre <b class="dres">—</b></div>
+        ${AVS.map((av,a) => `<label class="av"><span>${av.n}<small>${av.d}</small></span>
+          <input inputmode="decimal" maxlength="5" data-k="${b*3+a}" value="${val(g[b*3+a])}" aria-label="${s} ${b+1}º bimestre ${av.n}"></label>`).join('')}
+        <div class="dfoot"></div></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('.row').forEach(updateRow);
+}
+
+function updateRow(row){
+  const s = row.dataset.s, a = analyze(gradesOf(s));
+  row.className = row.className.replace(/\bt-\w+/g,'').trim() + (a.tone ? ' t-'+a.tone : '');
+  row.querySelector('.pill').textContent = a.label;
+  row.querySelector('.avg b').textContent = fmt(a.final ?? a.avg);
+  row.querySelector('.need').innerHTML = needText(a);
+  row.querySelector('.meter i').style.width = ((a.final ?? a.avg ?? 0)*10)+'%';
+  row.querySelector('.meter em').style.left = (state.min*10)+'%';
+  const ph = a.need != null && a.need <= 10 ? fmt(up1(Math.max(a.need,0))) : (a.key==='risk' ? '10' : '');
+  const arr = gradesOf(s), open = row.classList.contains('open');
+  row.querySelector('.toggle').textContent = open ? '▴ Fechar' : '▾ AV1 · AV2 · AV3';
+  row.querySelectorAll('.bim').forEach(btn => {
+    const b = +btn.dataset.bim, bi = bimInfo(arr, b), bv = btn.querySelector('.bv');
+    if (bi.v == null){ bv.textContent = ph || '—'; bv.classList.add('ph'); }
+    else { bv.textContent = fmt(bi.v); bv.classList.remove('ph'); }
+    btn.classList.toggle('partial', bi.v != null && !bi.complete);
+    btn.classList.toggle('lo', bi.v != null && bi.v < state.min);
+    btn.classList.toggle('hi', bi.v != null && bi.v >= state.min);
+    btn.title = bi.v == null ? 'Clique para lançar AV1, AV2 e AV3' : bi.complete ? 'Bimestre completo' : 'Parcial — ainda faltam avaliações';
+    const dres = row.querySelector(`[data-db="${b}"] .dres`);
+    dres.textContent = bi.v == null ? '—' : fmt(bi.v);
+    dres.className = 'dres ' + (bi.v == null ? '' : bi.v >= state.min ? 'hi' : 'lo');
+    row.querySelector(`[data-db="${b}"] .dfoot`).textContent =
+      bi.v == null ? 'Sem notas ainda' : bi.complete ? (bi.v >= state.min ? 'Bimestre fechado no azul 💙' : 'Bimestre fechado abaixo da média') : `Parcial (${bi.n}/3 avaliações)`;
+  });
+  row.querySelectorAll('input[data-k]').forEach(inp => {
+    const v = parseGrade(inp.value);
+    inp.placeholder = v == null ? ph : '';
+    inp.classList.toggle('lo', v != null && v < state.min);
+    inp.classList.toggle('hi', v != null && v >= state.min);
+  });
+}
+
+function renderSummary(announce){
+  const st = yearStats(), C = 238.76;
+  $('#yearTitle').textContent = YEARS[state.year].title;
+  $('#ruleTxt').innerHTML = `Bimestre = (AV1 + AV2 + AV3) ÷ 3 · Média para passar: <b>${fmt(state.min)}</b>`;
+  const gen = st.general;
+  $('#ringNum').textContent = fmt(gen);
+  $('#ringVal').style.strokeDashoffset = C - C*((gen??0)/10);
+  $('#ringVal').setAttribute('stroke', gen==null ? 'var(--line)' : gen >= state.min ? 'var(--blue)' : gen >= state.min-1 ? 'var(--amber)' : 'var(--red)');
+  $('#ringNum').className = gen==null ? '' : gen >= state.min ? 'c-blue' : 'c-red';
+  $('#ringSub').textContent = gen==null ? 'Lance suas notas para começar' : gen >= 8 ? 'Desempenho excelente! 🌟' : gen >= state.min ? 'Você está no azul. Continue assim!' : 'Abaixo da média — dá pra virar!';
+  $('#sBlue').textContent = st.blue; $('#sBlueSub').textContent = `de ${st.list.length} matérias`;
+  $('#sWarn').textContent = st.bad.length; $('#sWarnSub').textContent = st.bad.length ? st.bad.slice(0,2).map(x=>x.s.toLowerCase()).join(', ') + (st.bad.length>2?'…':'') : 'Nenhuma. Arrasou!';
+  $('#sFilled').textContent = st.filled; $('#sFilledSub').textContent = `de ${st.total} (${Math.round(st.filled/st.total*100)}%)`;
+
+  const f = st.focus;
+  if (!f){ $('#focusEmoji').textContent='👋'; $('#focusTitle').textContent='Bem-vindo(a)!'; $('#focusText').textContent='Comece lançando as notas do 1º bimestre. Eu calculo tudo pra você.'; }
+  else if (isBad(f.a)){ $('#focusEmoji').textContent=emojiOf(f.s); $('#focusTitle').textContent=`Foco agora: ${f.s}`;
+    $('#focusText').innerHTML = f.a.key==='fail' ? `Média final ${fmt(f.a.final)}. Prepare-se bem para a recuperação.` : needText(f.a).replace(/<\/?strong>/g,'') + '.'; }
+  else { $('#focusEmoji').textContent='🏆'; $('#focusTitle').textContent='Tudo sob controle!';
+    $('#focusText').textContent = `Sua matéria mais "apertada" é ${f.s} (média ${fmt(f.a.final ?? f.a.avg)}). Continue firme!`; }
+
+  $('#heroMsg').textContent = gen==null ? 'Acompanhe suas notas e descubra quanto precisa para passar.' :
+    st.bad.length ? `${st.bad.length} matéria${st.bad.length>1?'s':''} pedindo atenção. Você consegue! 💪` : 'Todas as matérias com nota estão no azul 💙';
+  renderBadges(st, announce);
+}
+
+function renderAll(){ renderTabs(); renderChips(); renderList(); renderSummary(false); applyTheme(); }
+
+/* ================== TOASTS & CELEBRAÇÃO ================== */
+function toast(icon, title, text, tone='', ms=5200){
+  const el = document.createElement('div');
+  el.className = 'toast ' + tone;
+  el.innerHTML = `<div class="te">${icon}</div><div><strong class="tt">${title}</strong><p>${text}</p></div><button class="x" aria-label="Fechar">✕</button>`;
+  const close = () => { el.classList.add('out'); setTimeout(()=>el.remove(), 300); };
+  el.querySelector('.x').onclick = close;
+  const box = $('#toasts'); box.appendChild(el);
+  while (box.children.length > 3) box.firstChild.remove();
+  setTimeout(close, ms);
+}
+function celebrate(power=1){
+  if (typeof confetti !== 'function') return;
+  confetti({ particleCount: Math.round(90*power), spread: 70, origin:{ y:.7 }, colors:['#2563eb','#60a5fa','#7c3aed','#facc15','#ffffff'] });
+}
+
+const CHEER = ['Cada ponto conta — você está construindo isso!','Revisar 20 minutos por dia faz muita diferença.',
+  'Faça exercícios antigos de prova: é o melhor treino.','Tire dúvidas com o professor logo no começo do bimestre.',
+  'Explique a matéria em voz alta como se fosse para um amigo.','Monte um resumo de 1 página antes da prova.',
+  'Durma bem antes da prova — o cérebro agradece.','Pequenos passos todo dia vencem a maratona de véspera.'];
+const PRAISE = ['Mandou bem demais!','Isso aí, no azul! 💙','Que evolução!','Orgulho! Continue assim.','Show de bola! 🎯'];
+
+function coachTip(){
+  const st = yearStats(), f = st.focus;
+  if (!f) return toast('👋','Vamos começar?','Digite sua primeira nota em qualquer matéria. Eu mostro quanto falta pra passar.');
+  if (isBad(f.a)){
+    const n = f.a.need != null && f.a.need <= 10 ? ` Meta: <b>${fmt(up1(f.a.need))}</b> nas próximas provas.` : '';
+    toast(emojiOf(f.s), `Priorize ${f.s}`, `É a matéria que mais precisa de você agora.${n} ${pick(CHEER)}`, f.a.tone==='red'?'red':'amber', 7000);
+  } else toast('🌟','Você está mandando bem!', `Tudo no azul. Dica: ${pick(CHEER)}`, '', 6000);
+}
+
+/* ================== EVENTOS ================== */
+document.addEventListener('click', e => {
+  const y = e.target.closest('[data-y]');
+  if (y && y.dataset.y !== state.year){ state.year = y.dataset.y; state.filter='all'; $('#search').value=''; save(); renderAll(); setTimeout(coachTip, 500); }
+  const f = e.target.closest('[data-f]');
+  if (f){ state.filter = f.dataset.f; save(); renderChips(); renderList(); }
+  // Abrir/fechar o painel de AVs
+  const bim = e.target.closest('.bim'), tg = e.target.closest('.toggle');
+  if (bim || tg){
+    const row = (bim||tg).closest('.row'), s = row.dataset.s;
+    const opening = bim ? true : !row.classList.contains('open');
+    row.classList.toggle('open', opening);
+    opening ? openRows.add(s) : openRows.delete(s);
+    row.querySelectorAll('.bim').forEach(x => x.classList.remove('sel'));
+    updateRow(row);
+    if (bim){
+      bim.classList.add('sel');
+      const box = row.querySelector(`[data-db="${bim.dataset.bim}"]`);
+      const inp = [...box.querySelectorAll('input')].find(i => !i.value) || box.querySelector('input');
+      inp.focus(); inp.select();
+    }
+  }
+});
+const openRows = new Set();
+$('#search').addEventListener('input', renderList);
+$('#tipBtn').onclick = coachTip;
+$('#focusBtn').onclick = coachTip;
+
+$('#list').addEventListener('input', e => {
+  if (!e.target.matches('input[data-k]')) return;
+  const row = e.target.closest('.row'), s = row.dataset.s, b = +e.target.dataset.k;
+  const v = parseGrade(e.target.value);
+  if (v === undefined) return;
+  const arr = [...gradesOf(s)]; arr[b] = v;
+  state.grades[state.year][s] = arr; save();
+  updateRow(row); renderSummary(true);
+});
+
+// Ao sair do campo: normaliza o valor e dispara as mensagens
+let lastStatus = {};
+$('#list').addEventListener('focusin', e => {
+  const row = e.target.closest('.row'); if (row) lastStatus[row.dataset.s] = analyze(gradesOf(row.dataset.s));
+});
+$('#list').addEventListener('change', e => {
+  if (!e.target.matches('input[data-k]')) return;
+  const row = e.target.closest('.row'), s = row.dataset.s, b = +e.target.dataset.k;
+  const v = parseGrade(e.target.value);
+  if (v === undefined){ e.target.value = ''; const arr=[...gradesOf(s)]; arr[b]=null; state.grades[state.year][s]=arr; save(); updateRow(row); renderSummary(true); return; }
+  e.target.value = v == null ? '' : String(v).replace('.',',');
+  const before = lastStatus[s] || {key:'empty'}, after = analyze(gradesOf(s));
+  lastStatus[s] = after;
+  if (v == null) return;
+  row.classList.remove('pop'); void row.offsetWidth; row.classList.add('pop');
+
+  if (v === 10){ toast('🔟', `Nota 10 em ${s}!`, 'Perfeito! Isso merece comemoração.', '', 5000); celebrate(1.2); }
+  else if (isBad(before) && isBlue(after)){
+    if (!state.earned[state.year].includes('comeback')) state.earned[state.year].push('comeback');
+    toast('🔥', `Virada em ${s}!`, `${pick(PRAISE)} Saiu da zona de risco.`, '', 5500); celebrate(1);
+  }
+  else if (after.key==='safe' && before.key!=='safe'){ toast('🎉', `${s} garantida!`, 'Você já atingiu a média do ano nessa matéria.', '', 5500); celebrate(.8); }
+  else if (after.key==='pass' && before.key!=='pass'){ toast('💙', `Aprovado em ${s}!`, `Média final ${fmt(after.final)}. ${pick(PRAISE)}`); celebrate(.8); }
+  else if (after.key==='fail'){ toast('🛟', `${s}: recuperação`, `Média final ${fmt(after.final)}. Não desanime — com foco dá pra recuperar!`, 'red', 6500); }
+  else if (after.key==='risk'){ toast('🚨', `Alerta em ${s}`, 'Só com as provas normais está difícil. Converse com o professor sobre trabalhos e recuperação.', 'red', 7000); }
+  else if (after.key==='warn'){ toast('📈', `Bora subir ${s}!`, `Você precisa de <b>${fmt(up1(after.need))}</b> ${after.emptyN>1?'nas próximas avaliações':'na última avaliação'}. ${pick(CHEER)}`, 'amber', 6500); }
+  else if (v >= 8 && Math.random() < .5){ toast('⭐', pick(PRAISE), `${fmt(v)} em ${s}. Excelente!`, '', 3500); }
+
+  const st = yearStats();
+  if (st.filled === st.total && st.blue === st.list.length){ setTimeout(()=>{ toast('🏆','ANO CONCLUÍDO NO AZUL!','Parabéns! Você passou em todas as matérias.','gold',9000); celebrate(2); setTimeout(()=>celebrate(2),400); }, 600); }
+});
+
+// Enter pula para o próximo campo
+$('#list').addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches('input[data-k]')) return;
+  e.preventDefault();
+  const all = [...e.target.closest('.row').querySelectorAll('input[data-k]')];
+  const nxt = all[all.indexOf(e.target)+1]; (nxt || e.target).focus(); if (nxt) nxt.select(); else e.target.blur();
+});
+
+/* ================== TEMA ================== */
+function applyTheme(){ if (state.theme) document.documentElement.dataset.theme = state.theme; else delete document.documentElement.dataset.theme; }
+$('#themeBtn').onclick = () => {
+  const dark = state.theme ? state.theme==='dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  state.theme = dark ? 'light' : 'dark'; save(); applyTheme();
+};
+
+/* ================== AJUSTES ================== */
+$('#setBtn').onclick = () => {
+  $('#optMin').value = String(state.min).replace('.',',');
+  $('#dlg').showModal();
+};
+$('#saveOpts').onclick = () => {
+  const m = parseGrade($('#optMin').value); if (m != null && m !== undefined) state.min = m;
+  save(); renderList(); renderSummary(false);
+  toast('⚙️','Ajustes salvos', `Média para passar: ${fmt(state.min)}`);
+};
+$('#exportBtn').onclick = async () => {
+  const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+  if (!dl){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(state,null,2)],{type:'application/json'})); a.download='minhas-notas.json'; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); return; }
+  try { await dl.save({ filename:'minhas-notas.json', data: JSON.stringify(state,null,2) }); } catch(e){}
+};
+$('#importBtn').onclick = () => $('#importFile').click();
+$('#importFile').onchange = e => {
+  const file = e.target.files[0]; if (!file) return;
+  const r = new FileReader();
+  r.onload = () => { try { const d = JSON.parse(r.result); if (!d.grades) throw 0; state = Object.assign(defaults(), d); save(); $('#dlg').close(); renderAll(); toast('✅','Backup importado','Suas notas foram restauradas.'); }
+    catch(err){ toast('⚠️','Arquivo inválido','Não consegui ler esse backup.','red'); } };
+  r.readAsText(file); e.target.value='';
+};
+let resetArm = 0;
+$('#resetBtn').onclick = () => {
+  if (Date.now() - resetArm > 4000){
+    resetArm = Date.now(); $('#resetBtn').textContent = 'Clique de novo para apagar';
+    setTimeout(() => { $('#resetBtn').textContent = 'Limpar ano'; }, 4000);
+    return;
+  }
+  resetArm = 0; $('#resetBtn').textContent = 'Limpar ano';
+  state.grades[state.year] = {}; state.earned[state.year] = []; save(); $('#dlg').close(); renderAll();
+  toast('🧹','Notas apagadas','Começando do zero. Bora!');
+};
+
+/* ================== INÍCIO ================== */
+renderAll();
+initCloud();
+setTimeout(coachTip, 1200);
+</script>
+</body>
+</html>
